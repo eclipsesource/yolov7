@@ -191,10 +191,10 @@ class LoadImages:  # for inference
         img = letterbox(img0, self.img_size, stride=self.stride)[0]
 
         # Convert
-        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
-        img = np.ascontiguousarray(img)
+        img2 = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img2 = np.ascontiguousarray(img2)
 
-        return path, img, img0, self.cap
+        return path, img2, img0, self.cap,img
 
     def new_video(self, path):
         self.frame = 0
@@ -361,7 +361,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.mosaic = self.augment and not self.rect  # load 4 images at a time into a mosaic (only during training)
         self.mosaic_border = [-img_size // 2, -img_size // 2]
         self.stride = stride
-        self.path = path        
+        self.path = path
+        self.pad_color = (114,114,114)        
         #self.albumentations = Albumentations() if augment else None
         try:
             f = []  # image files
@@ -388,10 +389,12 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.label_files = img2label_paths(self.img_files)  # labels
         cache_path = (p if p.is_file() else Path(self.label_files[0]).parent).with_suffix('.cache')  # cached labels
         if cache_path.is_file():
+            #print("cache_path_yes")
             cache, exists = torch.load(cache_path), True  # load
             #if cache['hash'] != get_hash(self.label_files + self.img_files) or 'version' not in cache:  # changed
             #    cache, exists = self.cache_labels(cache_path, prefix), False  # re-cache
         else:
+            #print("cache_path_no")
             cache, exists = self.cache_labels(cache_path, prefix), False  # cache
 
         # Display cache
@@ -407,6 +410,11 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         labels, shapes, self.segments = zip(*cache.values())
         self.labels = list(labels)
         self.shapes = np.array(shapes, dtype=np.float64)
+        self.ratiohw = []
+        for width,height in shapes:
+            self.ratiohw.append(height / width)
+        self.minratiohw = min(self.ratiohw)
+        print("maximum ratio between h and w: " + str(self.minratiohw))
         self.r = self.img_size / np.max(self.shapes)  # image resize ratio
         self.img_files = list(cache.keys())  # update
         self.label_files = img2label_paths(cache.keys())  # update
@@ -442,7 +450,6 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                     shapes[i] = [maxi, 1]
                 elif mini > 1:
                     shapes[i] = [1, 1 / mini]
-
             self.batch_shapes = np.ceil(np.array(shapes) * img_size / stride + pad).astype(np.int) * stride
 
         # Cache images into memory for faster training (WARNING: large datasets may exceed system RAM)
@@ -666,7 +673,12 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 def load_image(self, index):
     # loads 1 image from dataset, returns img, original hw, resized hw
     img = self.imgs[index]
+    target_h = self.img_size
+    target_w = round(self.img_size / self.minratiohw)
+    #print( "target_h: " + str(target_h))
+    #print( "target_w: " + str(target_w))
     if img is None:  # not cached
+        #print("here_img_None")
         path = self.img_files[index]
         img = cv2.imread(path)  # BGR
         assert img is not None, 'Image Not Found ' + path
@@ -674,8 +686,16 @@ def load_image(self, index):
         if self.r != 1:  # always resize down, only resize up if training with augmentation
             interp = cv2.INTER_AREA if self.r < 1 and not self.augment else cv2.INTER_LINEAR
             img = cv2.resize(img, (int(w0 * self.r), int(h0 * self.r)), interpolation=interp)
+            #pad = (target_size - img_size) // 2
+            #return pad, target_size - img_size - pad
+            pad_h = (target_h - img.shape[0]) // 2
+            pad_w = (target_w - img.shape[1]) // 2
+            img = cv2.copyMakeBorder(
+                 img, *(pad_h ,target_h - img.shape[0] - pad_h ), *(pad_w ,target_w - img.shape[1] - pad_w ),cv2.BORDER_CONSTANT, value=self.pad_color )
+            #print(img.shape)
         return img, (h0, w0), img.shape[:2]  # img, hw_original, hw_resized
     else:
+        #print("here_img_not_None")
         return self.imgs[index], self.img_hw0[index], self.img_hw[index]  # img, hw_original, hw_resized
 
 
@@ -772,10 +792,11 @@ def load_mosaic9(self, index):
     for i, index in enumerate(indices):
         # Load image
         img, _, (h, w) = load_image(self, index)
-
+        #print("load_mosaic9: " + str(img.shape))
         # place img in img9
         if i == 0:  # center
             img9 = np.full((s * 3, s * 3, img.shape[2]), 114, dtype=np.uint8)  # base image with 4 tiles
+            #print(img9.shape)
             h0, w0 = h, w
             c = s, s, s + w, s + h  # xmin, ymin, xmax, ymax (base) coordinates
         elif i == 1:  # top
