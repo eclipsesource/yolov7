@@ -536,12 +536,17 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
         hyp = self.hyp
         mosaic = self.mosaic and random.random() < hyp['mosaic']
+        print("-"*100)
+        print(self.mosaic, hyp['mosaic'], self.rect, self.image_weights)
+        print(index)
         if mosaic:
             # Load mosaic
             if random.random() < 0.8:
                 img, labels = load_mosaic(self, index)
+                print("mosaic", img.shape)
             else:
                 img, labels = load_mosaic9(self, index)
+                print("mosaic9", img.shape)
             shapes = None
 
             # MixUp https://arxiv.org/pdf/1710.09412.pdf
@@ -666,9 +671,16 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 def load_image(self, index):
     # loads 1 image from dataset, returns img, original hw, resized hw
     img = self.imgs[index]
+    max_img_width = np.amax(self.shapes, axis=0)[0]
     if img is None:  # not cached
         path = self.img_files[index]
         img = cv2.imread(path)  # BGR
+        pad_left = int((max_img_width - img.shape[1]) // 2)
+        pad_right = int(max_img_width - img.shape[1] - pad_left)
+        pad_color = (114,114,114)
+        img = cv2.copyMakeBorder(
+                img, 0, 0, pad_left , pad_right ,cv2.BORDER_CONSTANT, value=pad_color
+                )
         assert img is not None, 'Image Not Found ' + path
         h0, w0 = img.shape[:2]  # orig hw
         if self.r != 1:  # always resize down, only resize up if training with augmentation
