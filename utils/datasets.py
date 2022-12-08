@@ -188,7 +188,9 @@ class LoadImages:  # for inference
             #print(f'image {self.count}/{self.nf} {path}: ', end='')
 
         # Padded resize
-        img = letterbox(img0, self.img_size, stride=self.stride)[0]
+        print("image size before padding: ", img0.shape)
+        #img = letterbox(img0, self.img_size, stride=self.stride)[0]
+        print("image size in __next__", img.shape)
 
         # Convert
         img2 = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
@@ -547,6 +549,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             # Load mosaic
             if random.random() < 0.8:
                 img, labels = load_mosaic(self, index)
+                print("image shape in __getitem__", img.shape)
             else:
                 img, labels = load_mosaic9(self, index)
             shapes = None
