@@ -1,22 +1,4 @@
 # Repo-specific GitIgnore ----------------------------------------------------------------------------------------------
-*.jpg
-*.jpeg
-*.png
-*.bmp
-*.tif
-*.tiff
-*.heic
-*.JPG
-*.JPEG
-*.PNG
-*.BMP
-*.TIF
-*.TIFF
-*.HEIC
-*.mp4
-*.mov
-*.MOV
-*.avi
 *.data
 *.json
 *.cfg
@@ -24,16 +6,8 @@
 !cfg/yolov3*.cfg
 
 storage.googleapis.com
-runs/*
-data/*
+*runs/*
 data/images/*
-!data/*.yaml
-!data/hyps
-!data/scripts
-!data/images
-!data/images/zidane.jpg
-!data/images/bus.jpg
-!data/*.sh
 
 results*.csv
 
@@ -60,7 +34,6 @@ val2017.zip
 *.engine
 *.mlmodel
 *.torchscript
-*.tflite
 *.h5
 *_saved_model/
 *_web_model/
