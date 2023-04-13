@@ -145,7 +145,12 @@ class LoadImages:  # for inference
         self.stride = stride
         self.files = images + videos
         self.resize_scale = 0.5818
-        # self.resize_scale = img_size / max([cv2.imread(img_path).shape[0] for img_path in self.files])
+        print(
+            f""" 
+                !!! !!! Current resize scale is {self.resize_scale} !!! !!!
+                Please check if it is the same with the training process 
+            """
+            )
         self.nf = ni + nv  # number of files
         self.video_flag = [False] * ni + [True] * nv
         self.mode = 'image'
@@ -383,7 +388,13 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             self.img_files = sorted([x.replace('/', os.sep) for x in f if x.split('.')[-1].lower() in img_formats])
             # self.img_files = sorted([x for x in f if x.suffix[1:].lower() in img_formats])  # pathlib
             assert self.img_files, f'{prefix}No images found'
-            self.resize_scale = 0.5818
+            self.resize_scale = self.img_size / max([max(cv2.imread(img_file).shape) for img_file in self.img_files]) 
+            print(
+                f"""
+                    !!! !!! Current resizing scale is {self.resize_scale} !!!!!!
+          !!! !!! Please use the same scale for validation, testing and deployment !!! !!!
+                """
+            )
         except Exception as e:
             raise Exception(f'{prefix}Error loading data from {path}: {e}\nSee {help_url}')
 
