@@ -1,5 +1,5 @@
 [core]
     autostage = true
-    remote = cb-detect
-['remote "cb-detect"']
-    url = gdrive://1ZFMr0OcH2o7os66b9YnJWavP6-jHOUm5
+    remote = yolov7
+['remote "yolov7"']
+    url = gdrive://1sHm4OFFn4HJPk8u9MJ821mwVLIOFz038
